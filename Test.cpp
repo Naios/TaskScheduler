@@ -414,6 +414,27 @@ TEST_CASE("TaskScheduler random generator tests", "[TaskScheduler]" )
 
         REQUIRE(invoked == 1);
     }
+
+    SECTION("Random number generation bounds test")
+    {
+        scheduler
+            .Schedule(Seconds(1), Seconds(4), std::bind(invoke))
+            .Schedule(Seconds(3), Seconds(6), std::bind(invoke))
+            .Schedule(Seconds(5), Seconds(8), std::bind(invoke));
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked < 2);
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked < 3);
+        REQUIRE(1 <= invoked);
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(2 <= invoked);
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked == 3);
+    }
 }
 
 TEST_CASE("TaskScheduler validator and success hook", "[TaskScheduler]" )
