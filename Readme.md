@@ -73,9 +73,9 @@ scheduler.CancelAll();
 ```
 
 ### Contexts
-To access the TaskScheduler safely from within a scheduled function there is a TaskContext provided. **Never pass the TaskScheduler as lambda capture!!!**, The task context provides the ability to reschedule the executed function, cancel groups or schedule new tasks.
+To access the TaskScheduler safely from within a scheduled function there is a TaskContext provided. **Its important that you never pass the TaskScheduler as lambda capture! Use the TaskContext instead.** The task context provides the ability to reschedule the executed function, cancel groups or schedule new tasks.
 
-If you schedule new tasks from within a context the timepoint is calculated from the context, its possible that the function gets executed at the same update tick!
+If you schedule new tasks from within a context the time is calculated from the context, it's possible that the function gets executed at the same update tick!
 
 ```c++
 scheduler.Schedule(std::chrono::milliseconds(1500), [](TaskContext context)
