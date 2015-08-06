@@ -25,14 +25,11 @@ addons:
 
 install:
   # gcc 4.8
-  # - if [ "$CC" == "gcc" ]; then export CXX="gcc-4.8"; fi
   - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; fi
 
   # clang 3.4
-  # - if [ "$CC" == "clang" ]; then export CXX="clang-3.4"; fi
   # - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
 
-  # - $CC --version
   - $CXX --version
 
   - mkdir bin
