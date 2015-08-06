@@ -1,19 +1,27 @@
+sudo: false
 language: cpp
+cache: apt
+
+git:
+  depth: 1
 
 compiler:
   - gcc
   - clang
 
-before_install:
-  - sudo add-apt-repository -y ppa:kalakris/cmake
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-
-  # clang 3.4
-  - if [ "$CXX" == "clang++" ]; then sudo add-apt-repository -y ppa:h-rayflood/llvm; fi
-
-  - sudo apt-get -qq update
-  - sudo apt-get -qq install build-essential libtool make cmake
-  - sudo apt-get install -qq gcc-4.8 g++-4.8
+addons:
+  apt:
+    sources:
+    - kalakris-cmake
+    - ubuntu-toolchain-r-test
+    packages:
+    - build-essential
+    - libtool
+    - gcc-4.8
+    - g++-4.8
+    - clang
+    - make
+    - cmake
 
 install:
   # g++4.8.1
