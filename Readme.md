@@ -10,9 +10,9 @@
 ## Table of Contents
 
 * **[Usage Instructions](#usage-instructions)**
-  * **[Basics](#Basics)**
-  * **[Groups](#Groups)**
-  * **[Contexts](#Contexts)**
+  * **[Basics](#basics)**
+  * **[Groups](#groups)**
+  * **[Contexts](#contexts)**
 * **[Requirements](#requirements)**
 * **[License](#licence)**
 

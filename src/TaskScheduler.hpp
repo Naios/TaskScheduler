@@ -190,18 +190,20 @@ class TaskScheduler
 
 public:
     TaskScheduler()
-        : self_reference(this, [](TaskScheduler const*) { }), _now(clock_t::now()), _predicate(EmptyValidator) { }
+        : self_reference(this, [](TaskScheduler const*) { }),
+          _now(clock_t::now()), _predicate(EmptyValidator) { }
 
     template<typename P>
     TaskScheduler(P&& predicate)
-        : self_reference(this, [](TaskScheduler const*) { }), _now(clock_t::now()), _predicate(std::forward<P>(predicate)) { }
+        : self_reference(this, [](TaskScheduler const*) { }),
+          _now(clock_t::now()), _predicate(std::forward<P>(predicate)) { }
 
     TaskScheduler(TaskScheduler const&) = delete;
     TaskScheduler(TaskScheduler&&) = delete;
     TaskScheduler& operator= (TaskScheduler const&) = delete;
     TaskScheduler& operator= (TaskScheduler&&) = delete;
 
-    /// Sets a validator which is asked if tasks are allowed to be executed.
+    /// Sets a Validator which is asked if tasks are allowed to be executed.
     template<typename P>
     TaskScheduler& SetValidator(P&& predicate)
     {
@@ -209,7 +211,7 @@ public:
         return *this;
     }
 
-    /// Clears the validator which is asked if tasks are allowed to be executed.
+    /// Clears the Validator which is asked if tasks are allowed to be executed.
     TaskScheduler& ClearValidator();
 
     /// Update the scheduler to the current time.
@@ -222,7 +224,7 @@ public:
 
     /// Update the scheduler with a difftime.
     /// Calls the optional callback on successfully finish.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& Update(std::chrono::duration<_Rep, _Period> const& difftime,
         success_t const& callback = EmptyCallback)
     {
@@ -237,7 +239,7 @@ public:
 
     /// Schedule an event with a fixed rate.
     /// Never call this from within a task context! Use TaskContext::Schedule instead!
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         task_handler_t const& task)
     {
@@ -246,7 +248,7 @@ public:
 
     /// Schedule an event with a fixed rate.
     /// Never call this from within a task context! Use TaskContext::Schedule instead!
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         group_t const group, task_handler_t const& task)
     {
@@ -255,7 +257,7 @@ public:
 
     /// Schedule an event with a randomized rate between min and max rate.
     /// Never call this from within a task context! Use TaskContext::Schedule instead!
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, task_handler_t const& task)
     {
@@ -264,7 +266,7 @@ public:
 
     /// Schedule an event with a fixed rate.
     /// Never call this from within a task context! Use TaskContext::Schedule instead!
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, group_t const group,
         task_handler_t const& task)
@@ -285,7 +287,7 @@ public:
     TaskScheduler& CancelGroupsOf(std::vector<group_t> const& groups);
 
     /// Delays all tasks with the given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& DelayAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
         _task_holder.ModifyIf([&duration](TaskContainer const& task) -> bool
@@ -297,7 +299,7 @@ public:
     }
 
     /// Delays all tasks with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& DelayAll(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
@@ -305,7 +307,7 @@ public:
     }
 
     /// Delays all tasks of a group with the given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& DelayGroup(group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
         _task_holder.ModifyIf([&duration, group](TaskContainer const& task) -> bool
@@ -322,7 +324,7 @@ public:
     }
 
     /// Delays all tasks of a group with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& DelayGroup(group_t const group,
         std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
@@ -331,7 +333,7 @@ public:
     }
 
     /// Reschedule all tasks with a given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& RescheduleAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
         auto const end = _now + duration;
@@ -344,7 +346,7 @@ public:
     }
 
     /// Reschedule all tasks with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& RescheduleAll(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
@@ -352,7 +354,7 @@ public:
     }
 
     /// Reschedule all tasks of a group with the given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& RescheduleGroup(group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
         auto const end = _now + duration;
@@ -370,7 +372,7 @@ public:
     }
 
     /// Reschedule all tasks of a group with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskScheduler& RescheduleGroup(group_t const group,
         std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
@@ -382,7 +384,7 @@ private:
     /// Insert a new task to the enqueued tasks.
     TaskScheduler& InsertTask(TaskContainer task);
 
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& ScheduleAt(timepoint_t const& end,
         std::chrono::duration<_Rep, _Period> const& time, task_handler_t const& task)
     {
@@ -391,7 +393,7 @@ private:
 
     /// Schedule an event with a fixed rate.
     /// Never call this from within a task context! Use TaskContext::schedule instead!
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskScheduler& ScheduleAt(timepoint_t const& end,
         std::chrono::duration<_Rep, _Period> const& time,
         group_t const group, task_handler_t const& task)
@@ -402,7 +404,7 @@ private:
     }
 
     // Returns a random duration between min and max
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     std::chrono::duration<_RepLeft, _PeriodLeft>
     static RandomDurationBetween(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
             std::chrono::duration<_RepRight, _PeriodRight> const& max)
@@ -441,6 +443,21 @@ class TaskContext
     /// Dispatches an action safe on the TaskScheduler
     TaskContext& Dispatch(std::function<TaskScheduler&(TaskScheduler&)> const& apply);
 
+    // Copy assign
+    // TODO Make TaskContext move only
+    TaskContext& operator= (TaskContext const& right)
+    {
+        _task = right._task;
+        _owner = right._owner;
+        _consumed = right._consumed;
+        return *this;
+    }
+
+    // Copy construct
+    // TODO Make TaskContext move only
+    TaskContext(TaskContext const& right)
+        : _task(right._task), _owner(right._owner), _consumed(right._consumed) { }
+
 public:
     // Empty constructor
     TaskContext()
@@ -450,22 +467,10 @@ public:
     explicit TaskContext(TaskScheduler::TaskContainer&& task, std::weak_ptr<TaskScheduler>&& owner)
         : _task(task), _owner(owner), _consumed(std::make_shared<bool>(false)) { }
 
-    // Copy construct
-    TaskContext(TaskContext const& right)
-        : _task(right._task), _owner(right._owner), _consumed(right._consumed) { }
-
     // Move construct
     TaskContext(TaskContext&& right)
-        : _task(std::move(right._task)), _owner(std::move(right._owner)), _consumed(std::move(right._consumed)) { }
-
-    // Copy assign
-    TaskContext& operator= (TaskContext const& right)
-    {
-        _task = right._task;
-        _owner = right._owner;
-        _consumed = right._consumed;
-        return *this;
-    }
+        : _task(std::move(right._task)), _owner(std::move(right._owner)),
+          _consumed(std::move(right._consumed)) { }
 
     // Move assign
     TaskContext& operator= (TaskContext&& right)
@@ -495,7 +500,7 @@ public:
     /// std::chrono::seconds(5) for example.
     /// This will consume the task context, its not possible to repeat the task again
     /// from the same task context!
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& Repeat(std::chrono::duration<_Rep, _Period> const& duration)
     {
         ThrowOnConsumed();
@@ -521,7 +526,7 @@ public:
     /// std::chrono::seconds(5) for example.
     /// This will consume the task context, its not possible to repeat the task again
     /// from the same task context!
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& Repeat(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
@@ -536,7 +541,7 @@ public:
     /// Its possible that the new event is executed immediately!
     /// Use TaskScheduler::Async to create a task
     /// which will be called at the next update tick.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::task_handler_t const& task)
     {
@@ -551,7 +556,7 @@ public:
     /// Its possible that the new event is executed immediately!
     /// Use TaskScheduler::Async to create a task
     /// which will be called at the next update tick.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::group_t const group, TaskScheduler::task_handler_t const& task)
     {
@@ -566,7 +571,7 @@ public:
     /// Its possible that the new event is executed immediately!
     /// Use TaskScheduler::Async to create a task
     /// which will be called at the next update tick.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, TaskScheduler::task_handler_t const& task)
     {
@@ -577,7 +582,7 @@ public:
     /// Its possible that the new event is executed immediately!
     /// Use TaskScheduler::Async to create a task
     /// which will be called at the next update tick.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, TaskScheduler::group_t const group,
         TaskScheduler::task_handler_t const& task)
@@ -596,14 +601,14 @@ public:
     TaskContext& CancelGroupsOf(std::vector<TaskScheduler::group_t> const& groups);
 
     /// Delays all tasks with the given duration from within the context.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& DelayAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
         return Dispatch(std::bind(&TaskScheduler::DelayAll<_Rep, _Period>, std::placeholders::_1, duration));
     }
 
     /// Delays all tasks with a random duration between min and max from within the context.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& DelayAll(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
@@ -611,14 +616,14 @@ public:
     }
 
     /// Delays all tasks of a group with the given duration from within the context.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& DelayGroup(TaskScheduler::group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
         return Dispatch(std::bind(&TaskScheduler::DelayGroup<_Rep, _Period>, std::placeholders::_1, group, duration));
     }
 
     /// Delays all tasks of a group with a random duration between min and max from within the context.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& DelayGroup(TaskScheduler::group_t const group,
         std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
@@ -627,14 +632,14 @@ public:
     }
 
     /// Reschedule all tasks with the given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& RescheduleAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
         return Dispatch(std::bind(&TaskScheduler::RescheduleAll, std::placeholders::_1, duration));
     }
 
     /// Reschedule all tasks with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& RescheduleAll(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
@@ -642,14 +647,14 @@ public:
     }
 
     /// Reschedule all tasks of a group with the given duration.
-    template<class _Rep, class _Period>
+    template<typename _Rep, typename _Period>
     TaskContext& RescheduleGroup(TaskScheduler::group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
         return Dispatch(std::bind(&TaskScheduler::RescheduleGroup<_Rep, _Period>, std::placeholders::_1, group, duration));
     }
 
     /// Reschedule all tasks of a group with a random duration between min and max.
-    template<class _RepLeft, class _PeriodLeft, class _RepRight, class _PeriodRight>
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
     TaskContext& RescheduleGroup(TaskScheduler::group_t const group,
         std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
