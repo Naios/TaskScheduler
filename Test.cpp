@@ -24,9 +24,79 @@ using namespace tsc;
 
 using Seconds = std::chrono::seconds;
 
+class TaskHandler
+    : std::function<void(TaskContext)>
+{
+    template<typename>
+    struct HandlerFunction;
+
+    template<typename _Return, typename... _Args>
+    struct HandlerFunction<_Return(_Args...)>
+        : public std::function<_Return(_Args...)>
+    {
+        template<
+            typename T,
+            class = typename std::enable_if<
+                std::is_same<_Return, void>::value
+                ||
+                std::is_convertible<
+                    decltype(std::declval<T>()(std::declval<_Args>()...)),
+                    _Return
+                >::value
+            >::type
+        >
+        HandlerFunction(T&& function) : std::function<_Return(_Args...)>(std::forward<T>(function)) { }
+    };
+
+public:
+    TaskHandler(HandlerFunction<void(TaskContext)> const& handler)
+        : std::function<void(TaskContext)>(handler) { }
+
+    TaskHandler(HandlerFunction<void(TaskContext)>&& handler)
+        : std::function<void(TaskContext)>(std::move(handler)) { }
+
+    TaskHandler(HandlerFunction<void()> const& handler)
+        : std::function<void(TaskContext)>(std::bind(handler)) { }
+
+    TaskHandler(HandlerFunction<void()>&& handler)
+        : std::function<void(TaskContext)>(std::bind(std::move(handler))) { }
+};
+
+template<typename T>
+std::true_type to_true_type(T);
+
+template<typename T>
+struct is_task_handler
+    : decltype(to_true_type(std::function<void(TaskContext)>(std::declval<T>())), std::false_type()) { };
+
+void consumeHandler(TaskHandler handler)
+{
+    
+}
+
 int main(int argc, char* const argv[])
 {
     int const result = Catch::Session().run(argc, argv);
+
+    auto lam1 = [](TaskContext)
+    {
+    };
+
+    auto lam2 = []
+    {
+
+    };
+
+    // by ref
+    TaskHandler h11 = lam1;
+    TaskHandler h21 = lam2;
+
+    // by move
+    // TaskHandler h22 = []{};
+    // consumeHandler([](TaskContext){});
+
+    // static_assert(is_task_handler<decltype(lam1)>::value, "lam1");
+    // static_assert(!is_task_handler<decltype(lam2)>::value, "lam2");
 
     // Attach breakpoint here ,-)
     return result;
