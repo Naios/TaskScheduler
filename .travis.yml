@@ -20,12 +20,11 @@ addons:
     - gcc-4.8
     - g++-4.8
     - clang-3.4
-    - clang++-3.4
     - make
     - cmake
 
 install:
-  # g++4.8
+  # gcc 4.8
   - if [ "$CC" == "gcc" ]; then export CXX="gcc-4.8"; fi
   - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; fi
 
@@ -33,11 +32,13 @@ install:
   - if [ "$CC" == "clang" ]; then export CXX="clang-3.4"; fi
   - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
 
+  - $CC --version
+  - $CXX --version
+
   - mkdir bin
   - cd bin
   - cmake ../ -DCMAKE_BUILD_TYPE=Release
 
 script:
-  - $CXX --version
   - make -j 4
   - ./TaskSchedulerTests
