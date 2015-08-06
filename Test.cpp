@@ -604,9 +604,38 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
         REQUIRE(invoked == 1);
 
         scheduler.Update(Seconds(1));
-
-        // FIXME Out of time scheduling is not working!
         REQUIRE(invoked == 2);
+    }
+
+    SECTION("In context rescheduling with groups")
+    {
+        scheduler
+            .Schedule(Seconds(1), [&](TaskContext context)
+            {
+                context.RescheduleGroup(GROUP_0, Seconds(3));
+
+                REQUIRE(invoked == 0);
+                invoked = 1;
+            })
+            .Schedule(Seconds(10), [&](TaskContext context)
+            {
+                REQUIRE(invoked == 2);
+                invoked = 3;
+            })
+            .Schedule(Seconds(10), GROUP_0, [&](TaskContext context)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+
+        scheduler.Update(Seconds(3));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+        REQUIRE(invoked == 2);
+
+        scheduler.Update(Seconds(7));
+        REQUIRE(invoked == 3);
     }
 
     SECTION("In context delaying")
@@ -630,5 +659,37 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
 
         scheduler.Update(Seconds(1));
         REQUIRE(invoked == 2);
+    }
+
+    SECTION("In context delaying with groups")
+    {
+        scheduler
+            .Schedule(Seconds(1), [&](TaskContext context)
+            {
+                context.DelayGroup(GROUP_0, Seconds(1));
+                context.DelayGroup(GROUP_0, Seconds(0), Seconds(2));
+
+                REQUIRE(invoked == 0);
+                invoked = 1;
+            })
+            .Schedule(Seconds(3), GROUP_0, [&](TaskContext context)
+            {
+                REQUIRE(invoked == 2);
+                invoked = 3;
+            })
+            .Schedule(Seconds(3), [&](TaskContext context)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+        REQUIRE(invoked == 2);
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked == 3);
     }
 }

@@ -421,6 +421,12 @@ private:
     static RandomDurationBetween(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
             std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
+        if (!min.count() && !max.count())
+            std::chrono::duration<_RepLeft, _PeriodLeft>(0);
+
+        if (min.count() > max.count())
+            throw std::logic_error("min > max");
+
         static std::mutex _lock;
         std::lock_guard<std::mutex> guard(_lock);
 
@@ -662,7 +668,7 @@ public:
     TaskContext& RescheduleGroup(TaskScheduler::group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
         return Dispatch(std::bind(&TaskScheduler::RescheduleAtWithPredicate, std::placeholders::_1, _task->_end + duration,
-            [&](TaskContainer const& task)
+            [&](TaskScheduler::TaskContainer const& task)
             {
                 return task->IsInGroup(group);
             }));

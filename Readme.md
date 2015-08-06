@@ -1,6 +1,6 @@
 # C++11 Task Scheduler
 [![Build Status](https://travis-ci.org/Naios/TaskScheduler.svg?branch=master)](https://travis-ci.org/Naios/TaskScheduler)
-![Preview](https://raw.githubusercontent.com/Naios/TaskScheduler/master/doc/preview/Preview.gif)
+[![Preview](https://raw.githubusercontent.com/Naios/TaskScheduler/master/doc/preview/Preview.gif)](https://github.com/Naios/TaskScheduler/blob/master/doc/examples/preview.cpp)
 
 
 > Use **std::chrono::duration** to schedule functional types (**std::function**, std::bind, lambdas and functors) in the near future. Easy and safe to use and **dependency free**. Offers the possibility to reschedule, **repeat**, manipulate and **cancel tasks**.
