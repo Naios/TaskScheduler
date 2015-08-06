@@ -635,7 +635,7 @@ public:
     template<typename _Rep, typename _Period>
     TaskContext& RescheduleAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
-        return Dispatch(std::bind(&TaskScheduler::RescheduleAll, std::placeholders::_1, duration));
+        return Dispatch(std::bind(&TaskScheduler::RescheduleAll<_Rep, _Period>, std::placeholders::_1, duration));
     }
 
     /// Reschedule all tasks with a random duration between min and max.

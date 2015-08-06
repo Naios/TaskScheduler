@@ -488,43 +488,6 @@ TEST_CASE("TaskContext and repeatable tasks", "[TaskContext]" )
         REQUIRE(invoked == 10);
     }
 
-    SECTION("Beyond of time scheduling with new tasks, also tests if new tasks are scheduleable from within the context")
-    {
-        std::function<void(TaskContext)> task;
-        task = [&](TaskContext context)
-        {
-            ++invoked;
-            context.Schedule(Seconds(1), task);
-        };
-
-        scheduler.Schedule(Seconds(1), task);
-
-        scheduler.Update(Seconds(10));
-
-        REQUIRE(invoked == 10);
-    }
-
-    SECTION("In context scheduling")
-    {
-        scheduler.Schedule(Seconds(1), [&](TaskContext context)
-        {
-            REQUIRE(invoked == 0);
-            invoked = 1;
-
-            context.Schedule(Seconds(2), [&](TaskContext)
-            {
-                REQUIRE(invoked == 1);
-                invoked = 2;
-            });
-        });
-
-        scheduler.Update(Seconds(2));
-        REQUIRE(invoked == 1);
-
-        scheduler.Update(Seconds(1));
-        REQUIRE(invoked == 2);
-    }
-
     SECTION("Repeat counter is working")
     {
         std::size_t counter = 0;
@@ -576,5 +539,96 @@ TEST_CASE("TaskContext and repeatable tasks", "[TaskContext]" )
             int i = 0;
             ++i;
         });
+    }
+}
+
+TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling", "[TaskContext]" )
+{
+    TaskScheduler scheduler;
+
+    std::size_t invoked = 0;
+    SECTION("Behind of time scheduling with new tasks, also tests if new tasks are scheduleable from within the context")
+    {
+        std::function<void(TaskContext)> task;
+        task = [&](TaskContext context)
+        {
+            ++invoked;
+            context.Schedule(Seconds(1), task);
+        };
+
+        scheduler.Schedule(Seconds(1), task);
+
+        scheduler.Update(Seconds(10));
+
+        REQUIRE(invoked == 10);
+    }
+
+    SECTION("In context scheduling")
+    {
+        scheduler.Schedule(Seconds(1), [&](TaskContext context)
+        {
+            REQUIRE(invoked == 0);
+            invoked = 1;
+
+            context.Schedule(Seconds(2), [&](TaskContext)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+        });
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+        REQUIRE(invoked == 2);
+    }
+
+    SECTION("In context rescheduling")
+    {
+        scheduler
+            .Schedule(Seconds(1), [&](TaskContext context)
+            {
+                context.RescheduleAll(Seconds(3));
+
+                REQUIRE(invoked == 0);
+                invoked = 1;
+            })
+            .Schedule(Seconds(10), [&](TaskContext context)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+
+        scheduler.Update(Seconds(3));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+
+        // FIXME Out of time scheduling is not working!
+        // REQUIRE(invoked == 2);
+    }
+
+    SECTION("In context delaying")
+    {
+        scheduler
+            .Schedule(Seconds(1), [&](TaskContext context)
+            {
+                context.DelayAll(Seconds(1));
+
+                REQUIRE(invoked == 0);
+                invoked = 1;
+            })
+            .Schedule(Seconds(3), [&](TaskContext context)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+
+        scheduler.Update(Seconds(3));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+        REQUIRE(invoked == 2);
     }
 }
