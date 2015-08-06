@@ -579,7 +579,7 @@ public:
     {
         return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, group, _task->_end);
+            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, group, task);
         });
     }
 

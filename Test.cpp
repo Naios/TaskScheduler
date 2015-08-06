@@ -639,7 +639,7 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
                 REQUIRE(invoked == 0);
                 invoked = 1;
             })
-            .Schedule(Seconds(10), [&](TaskContext /*context*/)
+            .Schedule(Seconds(10), GROUP_4, [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 1);
                 invoked = 2;
