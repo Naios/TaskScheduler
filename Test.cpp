@@ -28,6 +28,7 @@ int main(int argc, char* const argv[])
 {
     int const result = Catch::Session().run(argc, argv);
 
+    // Attach breakpoint here ,-)
     return result;
 }
 
@@ -400,6 +401,27 @@ TEST_CASE("TaskContext and repeatable tasks", "[TaskContext]" )
         scheduler.Update(Seconds(10));
 
         REQUIRE(invoked == 10);
+    }
+
+    SECTION("In context scheduling")
+    {
+        scheduler.Schedule(Seconds(1), [&](TaskContext context)
+        {
+            REQUIRE(invoked == 0);
+            invoked = 1;
+
+            context.Schedule(Seconds(2), [&](TaskContext)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            });
+        });
+
+        scheduler.Update(Seconds(2));
+        REQUIRE(invoked == 1);
+
+        scheduler.Update(Seconds(1));
+        REQUIRE(invoked == 2);
     }
 
     SECTION("Repeat counter is working")
