@@ -594,7 +594,7 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
                 REQUIRE(invoked == 0);
                 invoked = 1;
             })
-            .Schedule(Seconds(10), [&](TaskContext context)
+            .Schedule(Seconds(10), [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 1);
                 invoked = 2;
@@ -617,12 +617,12 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
                 REQUIRE(invoked == 0);
                 invoked = 1;
             })
-            .Schedule(Seconds(10), [&](TaskContext context)
+            .Schedule(Seconds(10), [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 2);
                 invoked = 3;
             })
-            .Schedule(Seconds(10), GROUP_0, [&](TaskContext context)
+            .Schedule(Seconds(10), GROUP_0, [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 1);
                 invoked = 2;
@@ -648,7 +648,7 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
                 REQUIRE(invoked == 0);
                 invoked = 1;
             })
-            .Schedule(Seconds(3), [&](TaskContext context)
+            .Schedule(Seconds(3), [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 1);
                 invoked = 2;
@@ -667,17 +667,16 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
             .Schedule(Seconds(1), [&](TaskContext context)
             {
                 context.DelayGroup(GROUP_0, Seconds(1));
-                context.DelayGroup(GROUP_0, Seconds(0), Seconds(2));
 
                 REQUIRE(invoked == 0);
                 invoked = 1;
             })
-            .Schedule(Seconds(3), GROUP_0, [&](TaskContext context)
+            .Schedule(Seconds(3), GROUP_0, [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 2);
                 invoked = 3;
             })
-            .Schedule(Seconds(3), [&](TaskContext context)
+            .Schedule(Seconds(3), [&](TaskContext /*context*/)
             {
                 REQUIRE(invoked == 1);
                 invoked = 2;
@@ -689,7 +688,7 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
         scheduler.Update(Seconds(1));
         REQUIRE(invoked == 2);
 
-        scheduler.Update(Seconds(2));
+        scheduler.Update(Seconds(1));
         REQUIRE(invoked == 3);
     }
 }
