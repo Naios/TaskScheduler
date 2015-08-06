@@ -529,7 +529,7 @@ public:
         _task->_end += duration;
         _task->_repeated += 1;
         (*_consumed) = true;
-        return Dispatch(std::bind(&TaskScheduler::InsertTask, std::placeholders::_1, _task));
+        return Dispatch(std::bind(&TaskScheduler::InsertTask, std::placeholders::_1, std::cref(_task)));
     }
 
     /// Repeats the event with the same duration.
@@ -563,10 +563,9 @@ public:
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::task_handler_t const& task)
     {
-        auto const end = _task->_end;
-        return Dispatch([end, time, task](TaskScheduler& scheduler) -> TaskScheduler&
+        return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(end, time, task);
+            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, task);
         });
     }
 
@@ -578,10 +577,9 @@ public:
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::group_t const group, TaskScheduler::task_handler_t const& task)
     {
-        auto const end = _task->_end;
-        return Dispatch([end, time, group, task](TaskScheduler& scheduler) -> TaskScheduler&
+        return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(end, time, group, _task->_end);
+            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, group, _task->_end);
         });
     }
 
