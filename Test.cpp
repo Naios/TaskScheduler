@@ -107,26 +107,25 @@ TEST_CASE("TaskScheduler task scheduling basics", "[TaskScheduler]" )
 
     SECTION("Tasks are invoked depending on its time order")
     {
-        // Second
-        scheduler.Schedule(Seconds(2), [&](TaskContext)
-        {
-            REQUIRE(invoked == 1);
-            invoked = 2;
-        });
-
-        // First
-        scheduler.Schedule(Seconds(1), [&](TaskContext)
-        {
-            REQUIRE(invoked == 0);
-            invoked = 1;
-        });
-
-        // Third
-        scheduler.Schedule(Seconds(3), [&](TaskContext)
-        {
-            REQUIRE(invoked == 2);
-            invoked = 3;
-        });
+        scheduler
+            // Second
+            .Schedule(Seconds(2), [&](TaskContext)
+            {
+                REQUIRE(invoked == 1);
+                invoked = 2;
+            })
+            // First
+            .Schedule(Seconds(1), [&](TaskContext)
+            {
+                REQUIRE(invoked == 0);
+                invoked = 1;
+            })
+            // Third
+            .Schedule(Seconds(3), [&](TaskContext)
+            {
+                REQUIRE(invoked == 2);
+                invoked = 3;
+            });
 
         scheduler.Update(Seconds(10));
 
@@ -292,6 +291,107 @@ TEST_CASE("TaskScheduler task delaying", "[TaskScheduler]" )
     }
 }
 
+TEST_CASE("TaskScheduler task rescheduling", "[TaskScheduler]" )
+{
+    TaskScheduler scheduler;
+
+    bool aInvoked = false;
+    bool bInvoked = false;
+    auto invokeA = [&]
+    {
+        REQUIRE(!aInvoked);
+        aInvoked = true;
+    };
+    auto invokeB = [&]
+    {
+        REQUIRE(!bInvoked);
+        bInvoked = true;
+    };
+
+    SECTION("Test Case Test")
+    {
+        invokeA();
+        REQUIRE(aInvoked);
+
+        invokeB();
+        REQUIRE(bInvoked);
+    }
+
+    SECTION("All tasks are rescheduleable")
+    {
+        scheduler.Schedule(Seconds(2), std::bind(invokeA));
+        scheduler.Schedule(Seconds(10), std::bind(invokeB));
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        scheduler.RescheduleAll(Seconds(2));
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(aInvoked);
+        REQUIRE(bInvoked);
+    }
+
+    SECTION("Tasks are rescheduleable through groups")
+    {
+        scheduler.Schedule(Seconds(2), GROUP_0, std::bind(invokeA));
+        scheduler.Schedule(Seconds(10), GROUP_1, std::bind(invokeB));
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        scheduler.RescheduleGroup(GROUP_0, Seconds(4));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        // a=4, b=9
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        // a=3, b=8
+
+        scheduler.RescheduleGroup(GROUP_1, Seconds(4));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        // a=3, b=4
+
+        scheduler.Update(Seconds(2));
+
+        REQUIRE(!aInvoked);
+        REQUIRE(!bInvoked);
+
+        // a=1, b=2
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(aInvoked);
+        REQUIRE(!bInvoked);
+
+        // a=x, b=1
+
+        scheduler.Update(Seconds(1));
+
+        REQUIRE(aInvoked);
+        REQUIRE(bInvoked);
+    }
+}
+
 TEST_CASE("TaskScheduler validator and success hook", "[TaskScheduler]" )
 {
     bool valid = true;
@@ -345,6 +445,7 @@ TEST_CASE("TaskScheduler validator and success hook", "[TaskScheduler]" )
 
         scheduler.Update(Seconds(3), [&]
         {
+            REQUIRE(!success);
             success = true;
         });
 
