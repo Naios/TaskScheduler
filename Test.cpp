@@ -606,7 +606,7 @@ TEST_CASE("TaskContext and behind of time scheduling, delaying and rescheduling"
         scheduler.Update(Seconds(1));
 
         // FIXME Out of time scheduling is not working!
-        // REQUIRE(invoked == 2);
+        REQUIRE(invoked == 2);
     }
 
     SECTION("In context delaying")

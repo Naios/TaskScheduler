@@ -336,13 +336,7 @@ public:
     template<typename _Rep, typename _Period>
     TaskScheduler& RescheduleAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
-        auto const end = _now + duration;
-        _task_holder.ModifyIf([end](TaskContainer const& task) -> bool
-        {
-            task->_end = end;
-            return true;
-        });
-        return *this;
+        return RescheduleAt(_now + duration);
     }
 
     /// Reschedule all tasks with a random duration between min and max.
@@ -357,18 +351,10 @@ public:
     template<typename _Rep, typename _Period>
     TaskScheduler& RescheduleGroup(group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
-        auto const end = _now + duration;
-       _task_holder.ModifyIf([end, group](TaskContainer const& task) -> bool
+        return RescheduleAtWithPredicate(_now + duration, [&](TaskContainer const& task)
         {
-            if (task->IsInGroup(group))
-            {
-                task->_end = end;
-                return true;
-            }
-            else
-                return false;
+            return task->IsInGroup(group);
         });
-        return *this;
     }
 
     /// Reschedule all tasks of a group with a random duration between min and max.
@@ -401,6 +387,32 @@ private:
         // FIXME Reuse std::unique_ptr
         static repeated_t const DEFAULT_REPEATED = 0;
         return InsertTask(TaskContainer(new Task(end + time, time, group, DEFAULT_REPEATED, task)));
+    }
+
+    static bool AlwaysTruePredicate(TaskContainer const&)
+    {
+        return true;
+    }
+
+    TaskScheduler& RescheduleAt(timepoint_t const& end)
+    {
+        return RescheduleAtWithPredicate(end, AlwaysTruePredicate);
+    }
+
+    /// Reschedule all tasks with a given duration relative to the given time.
+    TaskScheduler& RescheduleAtWithPredicate(timepoint_t const& end, std::function<bool(TaskContainer const&)> const& predicate)
+    {
+        _task_holder.ModifyIf([&](TaskContainer const& task) -> bool
+        {
+            if (predicate(task))
+            {
+                task->_end = end;
+                return true;
+            }
+            else
+                return false;
+        });
+        return *this;
     }
 
     // Returns a random duration between min and max
@@ -560,10 +572,9 @@ public:
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::group_t const group, TaskScheduler::task_handler_t const& task)
     {
-        auto const end = _task->_end;
         return Dispatch([end, time, group, task](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(end, time, group, task);
+            return scheduler.ScheduleAt<_Rep, _Period>(end, time, group, _task->_end);
         });
     }
 
@@ -635,7 +646,7 @@ public:
     template<typename _Rep, typename _Period>
     TaskContext& RescheduleAll(std::chrono::duration<_Rep, _Period> const& duration)
     {
-        return Dispatch(std::bind(&TaskScheduler::RescheduleAll<_Rep, _Period>, std::placeholders::_1, duration));
+        return Dispatch(std::bind(&TaskScheduler::RescheduleAt, std::placeholders::_1, _task->_end + duration));
     }
 
     /// Reschedule all tasks with a random duration between min and max.
@@ -650,7 +661,11 @@ public:
     template<typename _Rep, typename _Period>
     TaskContext& RescheduleGroup(TaskScheduler::group_t const group, std::chrono::duration<_Rep, _Period> const& duration)
     {
-        return Dispatch(std::bind(&TaskScheduler::RescheduleGroup<_Rep, _Period>, std::placeholders::_1, group, duration));
+        return Dispatch(std::bind(&TaskScheduler::RescheduleAtWithPredicate, std::placeholders::_1, _task->_end + duration,
+            [&](TaskContainer const& task)
+            {
+                return task->IsInGroup(group);
+            }));
     }
 
     /// Reschedule all tasks of a group with a random duration between min and max.
