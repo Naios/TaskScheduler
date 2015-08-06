@@ -578,6 +578,7 @@ public:
     TaskContext& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         TaskScheduler::group_t const group, TaskScheduler::task_handler_t const& task)
     {
+        auto const end = _task->_end;
         return Dispatch([end, time, group, task](TaskScheduler& scheduler) -> TaskScheduler&
         {
             return scheduler.ScheduleAt<_Rep, _Period>(end, time, group, _task->_end);
