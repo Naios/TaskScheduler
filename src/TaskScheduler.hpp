@@ -53,7 +53,28 @@ class TaskScheduler
     // Time definitions (use steady clock)
     typedef std::chrono::steady_clock clock_t;
     typedef clock_t::time_point timepoint_t;
-    typedef clock_t::duration duration_t;
+
+    // Duration calculator
+    typedef std::function<clock_t::duration()> duration_calculator_t;
+
+    // Static time
+    template<typename _Rep, typename _Period>
+    static duration_calculator_t MakeDurationCalculator(std::chrono::duration<_Rep, _Period> const& duration)
+    {
+        return [duration]
+        {
+            return duration;
+        };
+    }
+
+    // Random time between min and max
+    template<typename _RepLeft, typename _PeriodLeft, typename _RepRight, typename _PeriodRight>
+    static duration_calculator_t MakeDurationCalculator(
+        std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
+        std::chrono::duration<_RepRight, _PeriodRight> const& max)
+    {
+        return std::bind(RandomDurationBetween<_RepLeft, _PeriodLeft, _RepRight, _PeriodRight>, min, max);
+    }
 
     // Task group type
     typedef unsigned int group_t;
@@ -80,21 +101,25 @@ class TaskScheduler
         friend class TaskScheduler;
 
         timepoint_t _end;
-        duration_t _duration;
+        duration_calculator_t _duration_calculator;
         std::unique_ptr<group_t> _group;
         repeated_t _repeated;
         task_handler_t _task;
 
     public:
         // All Argument construct
-        Task(timepoint_t const& end, duration_t const& duration, group_t const group,
-            repeated_t const repeated, task_handler_t const& task)
-                : _end(end), _duration(duration), _group(TaskScheduler::MakeUnique<group_t>(group)),
+        Task(timepoint_t const& end, duration_calculator_t&& duration_calculator,
+             group_t const group,
+             repeated_t const repeated, task_handler_t const& task)
+                : _end(end), _duration_calculator(std::move(duration_calculator)),
+                  _group(TaskScheduler::MakeUnique<group_t>(group)),
                   _repeated(repeated), _task(task) { }
 
         // Minimal Argument construct
-        Task(timepoint_t const& end, duration_t const& duration, task_handler_t const& task)
-            : _end(end), _duration(duration), _group(nullptr), _repeated(0), _task(task) { }
+        Task(timepoint_t const& end, duration_calculator_t&& duration_calculator,
+             task_handler_t const& task)
+            : _end(end), _duration_calculator(std::move(duration_calculator)),
+              _group(nullptr), _repeated(0), _task(task) { }
 
         // Copy construct
         Task(Task const&) = delete;
@@ -243,7 +268,7 @@ public:
     TaskScheduler& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         task_handler_t const& task)
     {
-        return ScheduleAt(_now, time, task);
+        return ScheduleAt(_now, MakeDurationCalculator(time), task);
     }
 
     /// Schedule an event with a fixed rate.
@@ -252,7 +277,7 @@ public:
     TaskScheduler& Schedule(std::chrono::duration<_Rep, _Period> const& time,
         group_t const group, task_handler_t const& task)
     {
-        return ScheduleAt(_now, time, group, task);
+        return ScheduleAt(_now, MakeDurationCalculator(time), group, task);
     }
 
     /// Schedule an event with a randomized rate between min and max rate.
@@ -261,7 +286,7 @@ public:
     TaskScheduler& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, task_handler_t const& task)
     {
-        return Schedule(RandomDurationBetween(min, max), task);
+        return ScheduleAt(_now, MakeDurationCalculator(min, max), task);
     }
 
     /// Schedule an event with a fixed rate.
@@ -271,7 +296,7 @@ public:
         std::chrono::duration<_RepRight, _PeriodRight> const& max, group_t const group,
         task_handler_t const& task)
     {
-        return Schedule(RandomDurationBetween(min, max), group, task);
+        return ScheduleAt(_now, MakeDurationCalculator(min, max), group, task);
     }
 
     /// Cancels all tasks.
@@ -370,23 +395,21 @@ private:
     /// Insert a new task to the enqueued tasks.
     TaskScheduler& InsertTask(TaskContainer task);
 
-    template<typename _Rep, typename _Period>
     TaskScheduler& ScheduleAt(timepoint_t const& end,
-        std::chrono::duration<_Rep, _Period> const& time, task_handler_t const& task)
+        duration_calculator_t&& duration_calculator, task_handler_t const& task)
     {
-        return InsertTask(TaskContainer(new Task(end + time, time, task)));
+        return InsertTask(TaskContainer(new Task(end + duration_calculator(), std::move(duration_calculator), task)));
     }
 
     /// Schedule an event with a fixed rate.
     /// Never call this from within a task context! Use TaskContext::schedule instead!
-    template<typename _Rep, typename _Period>
     TaskScheduler& ScheduleAt(timepoint_t const& end,
-        std::chrono::duration<_Rep, _Period> const& time,
+        duration_calculator_t&& duration_calculator,
         group_t const group, task_handler_t const& task)
     {
         // FIXME Reuse std::unique_ptr
         static repeated_t const DEFAULT_REPEATED = 0;
-        return InsertTask(TaskContainer(new Task(end + time, time, group, DEFAULT_REPEATED, task)));
+        return InsertTask(TaskContainer(new Task(end + duration_calculator(), std::move(duration_calculator), group, DEFAULT_REPEATED, task)));
     }
 
     static bool AlwaysTruePredicate(TaskContainer const&)
@@ -521,15 +544,8 @@ public:
     template<typename _Rep, typename _Period>
     TaskContext& Repeat(std::chrono::duration<_Rep, _Period> const& duration)
     {
-        ThrowOnConsumed();
-
-        // Set new duration, in-context timing and increment repeat counter
-        // FIXME Calculate a new random duration if the duration was random generated.
-        _task->_duration = duration;
-        _task->_end += duration;
-        _task->_repeated += 1;
-        (*_consumed) = true;
-        return Dispatch(std::bind(&TaskScheduler::InsertTask, std::placeholders::_1, std::cref(_task)));
+        _task->_duration_calculator = TaskScheduler::MakeDurationCalculator(duration);
+        return Repeat();
     }
 
     /// Repeats the event with the same duration.
@@ -537,7 +553,13 @@ public:
     /// from the same task context!
     TaskContext& Repeat()
     {
-        return Repeat(_task->_duration);
+        ThrowOnConsumed();
+
+        // Set new duration, in-context timing and increment repeat counter
+        _task->_end += _task->_duration_calculator();
+        _task->_repeated += 1;
+        (*_consumed) = true;
+        return Dispatch(std::bind(&TaskScheduler::InsertTask, std::placeholders::_1, std::cref(_task)));
     }
 
     /// Repeats the event and set a new duration that is randomized between min and max.
@@ -548,7 +570,8 @@ public:
     TaskContext& Repeat(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
-        return Repeat(TaskScheduler::RandomDurationBetween(min, max));
+        _task->_duration_calculator = TaskScheduler::MakeDurationCalculator(min, max);
+        return Repeat();
     }
 
     /// Schedule a callable function that is executed at the next update tick from within the context.
@@ -565,7 +588,7 @@ public:
     {
         return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, task);
+            return scheduler.ScheduleAt(_task->_end, TaskScheduler::MakeDurationCalculator(time), task);
         });
     }
 
@@ -579,7 +602,7 @@ public:
     {
         return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
         {
-            return scheduler.ScheduleAt<_Rep, _Period>(_task->_end, time, group, task);
+            return scheduler.ScheduleAt(_task->_end, TaskScheduler::MakeDurationCalculator(time), group, task);
         });
     }
 
@@ -591,7 +614,10 @@ public:
     TaskContext& Schedule(std::chrono::duration<_RepLeft, _PeriodLeft> const& min,
         std::chrono::duration<_RepRight, _PeriodRight> const& max, TaskScheduler::task_handler_t const& task)
     {
-        return Schedule(TaskScheduler::RandomDurationBetween(min, max), task);
+        return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
+        {
+            return scheduler.ScheduleAt(_task->_end, TaskScheduler::MakeDurationCalculator(min, max), task);
+        });
     }
 
     /// Schedule an event with a randomized rate between min and max rate from within the context.
@@ -603,7 +629,10 @@ public:
         std::chrono::duration<_RepRight, _PeriodRight> const& max, TaskScheduler::group_t const group,
         TaskScheduler::task_handler_t const& task)
     {
-        return Schedule(TaskScheduler::RandomDurationBetween(min, max), group, task);
+        return Dispatch([&](TaskScheduler& scheduler) -> TaskScheduler&
+        {
+            return scheduler.ScheduleAt(_task->_end, TaskScheduler::MakeDurationCalculator(min, max), group, task);
+        });
     }
 
     /// Cancels all tasks from within the context.
