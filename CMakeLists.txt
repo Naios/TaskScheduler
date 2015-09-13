@@ -48,8 +48,8 @@ include_directories(src testing)
 
 set(TEST_SOURCES Test.cpp)
 
-add_executable(TaskSchedulerTests ${TEST_SOURCES})
+add_executable(Test ${TEST_SOURCES})
 
-target_link_libraries(TaskSchedulerTests
+target_link_libraries(Test
   TaskScheduler
 )

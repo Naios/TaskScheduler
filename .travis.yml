@@ -5,31 +5,66 @@ cache: apt
 git:
   depth: 1
 
-compiler:
-  - gcc
-  - clang
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.8', 'valgrind']
+      env: COMPILER=g++-4.8
 
-addons:
-  apt:
-    sources:
-    - kalakris-cmake
-    - ubuntu-toolchain-r-test
-    packages:
-    - build-essential
-    - libtool
-    - gcc-4.8
-    - g++-4.8
-    - clang-3.4
-    - make
-    - cmake
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.9', 'valgrind']
+      env: COMPILER=g++-4.9
+
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-5', 'valgrind']
+      env: COMPILER=g++-5
+
+    - os: linux
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-4.8', 'valgrind']
+      compiler: clang
+      env: COMPILER=clang++
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+          packages: ['clang-3.5', 'valgrind']
+      env: COMPILER=clang++-3.5
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
+          packages: ['clang-3.6', 'valgrind']
+      env: COMPILER=clang++-3.6
+
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
+          packages: ['clang-3.7', 'valgrind']
+      env: COMPILER=clang++-3.7
 
 install:
-  # gcc 4.8
-  - if [ "$CXX" == "g++" ]; then export CXX="g++-4.8"; fi
-
-  # clang 3.4
-  # - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
-
+  - export CXX=$COMPILER
   - $CXX --version
 
   - mkdir bin
@@ -37,5 +72,8 @@ install:
   - cmake ../ -DCMAKE_BUILD_TYPE=Release
 
 script:
-  - make -j 4
-  - ./TaskSchedulerTests
+  - make -j2
+  - ./Test
+
+after_success:
+  - valgrind --leak-check=full --show-reachable=yes ./Test
