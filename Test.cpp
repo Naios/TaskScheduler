@@ -22,6 +22,7 @@
 
 using namespace tsc;
 
+using Milliseconds = std::chrono::milliseconds;
 using Seconds = std::chrono::seconds;
 
 int main(int argc, char* const argv[])
@@ -411,6 +412,17 @@ TEST_CASE("TaskScheduler random generator tests", "[TaskScheduler]" )
         REQUIRE(invoked == 0);
 
         scheduler.Update(Seconds(0));
+
+        REQUIRE(invoked == 1);
+    }
+
+    SECTION("Random ranges with multiple types (#2 regression test)")
+    {
+        scheduler.Schedule(Milliseconds(1800), Seconds(2), std::bind(invoke));
+
+        REQUIRE(invoked == 0);
+
+        scheduler.Update(Seconds(2));
 
         REQUIRE(invoked == 1);
     }

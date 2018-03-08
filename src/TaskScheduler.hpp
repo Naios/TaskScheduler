@@ -445,9 +445,12 @@ private:
             std::chrono::duration<_RepRight, _PeriodRight> const& max)
     {
         if (!min.count() && !max.count())
-            std::chrono::duration<_RepLeft, _PeriodLeft>(0);
+            return std::chrono::duration<_RepLeft, _PeriodLeft>(0);
 
-        if (min.count() > max.count())
+        using normalized_t = std::chrono::duration<_RepLeft, _PeriodLeft>;
+        auto normalized = std::chrono::duration_cast<normalized_t>(max);
+
+        if (min.count() > normalized.count())
             throw std::logic_error("min > max");
 
         static std::mutex _lock;
@@ -458,7 +461,7 @@ private:
         static std::mt19937 rng(rd());
 
         std::uniform_int_distribution<typename std::chrono::duration<_RepLeft, _PeriodLeft>::rep>
-            _distribution(min.count(), max.count());
+            _distribution(min.count(), normalized.count());
 
         // Distribute
         return std::chrono::duration<_RepLeft, _PeriodLeft>(_distribution(rng));
