@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(TaskScheduler CXX)
-include(GNUInstallDirs)
+project(TaskScheduler LANGUAGES CXX VERSION 1.0)
 
-option(BUILD_TESTAPP "Build unit-test app" ON)
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+include(FetchContent)
+
+option(BUILD_TASKSCHEDULER_TESTAPP "Build unit-test app" ON)
 
 add_library(TaskScheduler STATIC)
 add_library(TaskScheduler::TaskScheduler ALIAS TaskScheduler)
@@ -43,9 +46,17 @@ target_compile_features(TaskScheduler
 set_target_properties(TaskScheduler PROPERTIES
     PUBLIC_HEADER include/TaskScheduler/TaskScheduler.hpp)
 
-if (BUILD_TESTAPP)
+if (BUILD_TASKSCHEDULER_TESTAPP)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v2.13.1)
+
+    FetchContent_MakeAvailable(Catch2)
+
     add_executable(Test testing/Test.cpp)
-    target_link_libraries(Test TaskScheduler::TaskScheduler)
+    target_link_libraries(Test
+        PRIVATE TaskScheduler::TaskScheduler Catch2::Catch2)
 endif()
 
 # INSTALLATION
@@ -62,12 +73,28 @@ install(EXPORT ${PROJECT_NAME}Targets
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
     )
 
-#Export all targets in the target group "also" in the build directory, to be used by a consuming project (even if this project has not been installed) by including the *-buildtreeTargets.cmake file
+# Export all targets in the target group "also" in the build directory, to be used by a consuming project (even if this project has not been installed) by including the *Targets.cmake file
 export (
     EXPORT ${PROJECT_NAME}Targets
     NAMESPACE ${PROJECT_NAME}::
-    FILE ${PROJECT_NAME}-buildtreeTargets.cmake #Consumers can just include this file
+    FILE ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}Targets.cmake #Consumers can just include this file
     )
 
-add_executable(incubator src/main.cpp)
-target_link_libraries(incubator TaskScheduler::TaskScheduler)
+# Add configuration/version files that allows consumers to use find_package
+configure_package_config_file(
+    ${PROJECT_SOURCE_DIR}/cmake/ProjectConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    )
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+    )
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/${PROJECT_NAME}ConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+    )
