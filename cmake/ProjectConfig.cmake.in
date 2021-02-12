@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+include (CMakeFindDependencyMacro)
+
+if (NOT TARGET @PROJECT_NAME@::TaskScheduler)
+    include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+endif()
+
+check_required_components(TaskScheduler)
