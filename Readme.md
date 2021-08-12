@@ -20,7 +20,7 @@
 * **[License](#licence)**
 
 ## Usage Instructions
-### Schedulig tasks
+### Scheduling tasks
 
 Scheduling a task is very easy, just declare a `TaskScheduler` and use `TaskScheduler::Schedule`.
 
